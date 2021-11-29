@@ -30,7 +30,7 @@ packages <- c(
   "here", "svDialogs", "tidyverse",
   "rtweet", "rehydratoR",
   "tidytext", "tm", "igraph", "ggraph",
-  "tidycensus", "sf", "spdep"
+  "tidycensus", "sf", "spdep", "wordcloud", "cowplot", "biclass"
 )
 
 # additional packages: test which are still needed:
@@ -137,6 +137,7 @@ write.table(dorian_raw$status_id,
 )
 ```
 
+
 ## Search for generic tweets after hurricane season
 
 get tweets without any text filter for the same geographic region in November, 
@@ -160,6 +161,7 @@ write.table(november_raw$status_id,
   append = FALSE, quote = FALSE, row.names = FALSE, col.names = FALSE
 )
 ```
+
 
 ## Rehydrate the twitter data
 
@@ -195,13 +197,15 @@ dorianids <-
 filtered <- dlgList(
   choices = c("raw", "derived"), 
   title = "Which Dorin ids?")$res
-
+```
+```{r load-original-statusids, eval = FALSE}
 # load cleaned status id's for November general twitter search
 novemberids <-
   data.frame(read.table(here("data", "raw", "public", "novemberids.txt"),
     numerals = "no.loss"
   ))
 ```
+
 
 ### Rehydrate Twitter status ids
 This operation may take over an hour to run on all of the raw tweets
@@ -222,6 +226,11 @@ november_raw <- rehydratoR(twitter_token$app$key, twitter_token$app$secret,
 )
 ``` 
 
+
+
+
+
+
 ## Load the original search results
 
 Students in the GEOG 323 Open Source GIScience course may download the original
@@ -237,6 +246,34 @@ dorian_raw <- readRDS(here("data", "raw", "private", "dorian_raw.RDS"))
 november_raw <- readRDS(here("data", "raw", "private", "november_raw.RDS"))
 ```
 
+
+```{r load-replication}
+
+# Hurrian Ida data searched on `02-Sept-2021`
+tevent_raw1 <- readRDS(here("data", "raw", "private", "tevent_raw.RDS"))
+
+# Hurrian Ida data searched on `05-Sept-2021`
+tevent_raw2 <- readRDS(here("data", "raw", "private", "tevent_raw2.RDS"))
+
+# Hurrian Ida data searched on `10-Sept-2021`
+tevent_raw3 <- readRDS(here("data", "raw", "private", "tevent_raw3.RDS"))
+
+# Hurrian Ida data searched on `10-Sept-2021` for different themantic coverage
+tevent_raw4 <- readRDS(here("data", "raw", "private", "tevent_raw4.RDS"))
+
+# Search for generic tweets after hurricane season
+tdcontrol_raw <- readRDS(here("data", "raw", "private", "tdcontrol_raw.RDS"))
+
+```
+
+```{r combine all searches into one single table}
+
+tevent_raw <- dplyr::union(tevent_raw1, tevent_raw2)
+tevent_raw <- dplyr::union(tevent_raw, tevent_raw3)
+
+```
+
+
 ## Process geographic data in tweets 
 
 reference for lat_lng function: https://rtweet.info/reference/lat_lng.html
@@ -249,15 +286,43 @@ NA results included based on profile locations, not geotagging / geocoding.
 If you have these, it indicates that you exhausted the more precise tweets 
 in your search parameters and are including locations based on user profiles
 
+
+```{r count-places-types-replication}
+
+count(tevent_raw, place_type)
+
+```
+
+
 ```{r count-place-types}
 count(dorian_raw, place_type)
 ```
+
 
 ### Convert geographic information into lat/long coordinates
 
 If you have loaded filtered status ids, or you have already run this code, you
 will not notice a difference in `place_type` or `n` because the data has already
 been processed.
+
+```{r lat-long-replication}
+
+tevent <- tevent_raw %>% 
+  lat_lng(coords = c("coords_coords")) %>% 
+  subset(place_type == "city" | place_type == "neighborhood" | 
+    place_type == "poi" | !is.na(lat)
+  ) %>% 
+  lat_lng(coords = c("bbox_coords"))
+
+tdcontrol <- tdcontrol_raw %>% 
+  lat_lng(coords = c("coords_coords")) %>% 
+  subset(place_type == "city" | place_type == "neighborhood" | 
+    place_type == "poi" | !is.na(lat)
+  ) %>% 
+  lat_lng(coords = c("bbox_coords"))
+
+```
+
 
 ```{r lat-long}
 # convert GPS coordinates into lat and lng columns
@@ -287,6 +352,7 @@ november <- lat_lng(november, coords = c("bbox_coords"))
 count(dorian, place_type)
 ```
 
+
 ### Save processed tweets
 
 Optionally,
@@ -310,6 +376,25 @@ saveRDS(dorian, here("data", "derived", "private", "dorian.RDS"))
 saveRDS(november, here("data", "derived", "private", "november.RDS"))
 ```
 
+
+```{r save-processed-tweets-replication}
+
+write.table(tevent$status_id,
+  here("data", "derived", "public", "teventids.txt"),
+  append = FALSE, quote = FALSE, row.names = FALSE, col.names = FALSE
+)
+
+write.table(tdcontrol$status_id,
+  here("data", "derived", "public", "tdcontrolids.txt"),
+  append = FALSE, quote = FALSE, row.names = FALSE, col.names = FALSE
+)
+
+
+saveRDS(tevent, here("data", "derived", "private", "tevent.RDS"))
+saveRDS(tdcontrol, here("data", "derived", "private", "tdcontrol.RDS"))
+
+```
+
 ### Load processed tweets
 
 Optionally,
@@ -320,6 +405,13 @@ dorian <- readRDS(here("data", "derived", "private", "dorian.RDS"))
 november <- readRDS(here("data", "derived", "private", "november.RDS"))
 ```
 
+
+
+
+
+
+
+
 # Temporal Analysis
 
 Create a temporal data frame and graph it
@@ -328,7 +420,15 @@ Create a temporal data frame and graph it
 dorian_tweets_by_hour <- ts_data(dorian, by = "hours")
 ts_plot(dorian, by = "hours")
 ```
-happend on Sep 5th
+
+
+```{r temporal-replication}
+
+tevent_tweets_by_hour <- ts_data(tevent_raw, by = "hours")
+ts_plot(tevent_raw, by = "hours")
+
+```
+
 
 # Network Analysis
 
@@ -343,12 +443,72 @@ dorian_network <- network_graph(dorian, c("quote"))
 plot.igraph(dorian_network)
 ```
 
+
+```{r network-replication}
+
+tevent_network <- tevent %>% 
+  network_graph("retweet,quote") %>% 
+  simplify(remove.multiple = FALSE)
+tevent_network <- delete.vertices(
+  tevent_network,
+  degree(tevent_network, mode="in") < 1
+  ) %>% 
+  simplify()
+tevent_network <- delete.vertices(
+  tevent_network,
+  degree(tevent_network) == 0
+  )
+plot.igraph(
+    tevent_network,
+    vertex.size = 4,
+    vertex.label = ifelse(
+      degree(tevent_network) > 2, 
+      V(tevent_network)$name, ""), 
+    vertex.label.cex = 0.8, 
+    edge.arrow.mode = "->",
+    edge.arrow.size = 0.1
+  )
+
+```
+
+
 # Text Analysis
 
 ## Clean the text data
 
 Parse the tweet data for plain language, and parse tweet text into words.
 Remove stop words and our search terms.
+
+```{r text-processing-replication}
+
+# remove urls, fancy formatting, etc. in other words, clean the text content
+tevent_text <- tevent %>%
+  select(text) %>%
+  plain_tweets()
+tevent_text4 <- tevent_raw4 %>%
+  select(text) %>%
+  plain_tweets()
+
+# parse out words from tweet text
+tevent_words <- tevent_text %>% unnest_tokens(word, text)
+tevent_words4 <- tevent_text4 %>% unnest_tokens(word, text)
+
+data("stop_words")
+
+# add "t.co" twitter links to the list of stop words
+# also add the twitter search terms to the list
+# it would have been better to store a list of search terms to use here
+stop_words <- stop_words %>%
+  add_row(word = "t.co", lexicon = "SMART") %>%
+  add_row(word = "hurricane", lexicon = "Search") %>%
+  add_row(word = "ida", lexicon = "Search") %>%
+  add_row(word = "hurricaneida", lexicon = "Search")
+
+# delete stop words from tevent_words with an anti_join
+tevent_words <- anti_join(tevent_words, stop_words, by="word")
+tevent_words4 <- anti_join(tevent_words4, stop_words, by="word")
+
+```
 
 ```{r text-processing}
 # remove urls, fancy formatting, etc. in other words, clean the text content
@@ -384,6 +544,7 @@ word_count <- append(
 print(word_count)
 ```
 
+
 ## Graph frequencies of words
 
 ```{r word-frequency}
@@ -401,6 +562,103 @@ dorian_words %>%
     title = "Count of unique words found in tweets"
   )
 ```
+
+```{r word-frequency-replication}
+
+tevent_words %>%
+  count(word, sort = TRUE) %>%
+  slice_head(n = 20) %>%
+  mutate(word = reorder(word, n)) %>%
+  
+  ggplot(aes(x = word, y = n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+  labs(
+    x = "Count",
+    y = "Unique words",
+    title = "Count of unique words found in tweets"
+  )
+
+tevent_words4 %>%
+  count(word, sort = TRUE) %>%
+  slice_head(n = 20) %>%
+  mutate(word = reorder(word, n)) %>%
+  
+  ggplot(aes(x = word, y = n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+  labs(
+    x = "Count",
+    y = "Unique words",
+    title = "Count of unique words found in tweets after the Hurricane"
+  )
+```
+
+## Graph word cloud
+
+```{r word cloud}
+
+tevent_word_count <- tevent_words %>%
+  count(word, sort = TRUE) %>% 
+  top_n(130)
+
+# Plot the words with size = how frequently the words appear
+wordcloud(words = tevent_word_count$word, 
+          freq = tevent_word_count$n, random.order=FALSE, rot.per=0.35, colors = brewer.pal(8, "Dark2"))
+
+```
+
+## Graph word sentiments
+
+```{r word sentiment}
+
+sentiments <- get_sentiments("bing")
+
+ida_sentiment <- tevent_words %>%
+  inner_join(sentiments)
+post_ida_sentiment <- tevent_words4 %>% 
+  inner_join(sentiments)
+
+ida_sentiment %>% 
+  group_by(word) %>% 
+  summarise(num = n()) %>% 
+  filter(num > 120) %>% 
+  left_join(sentiments) %>% 
+  ggplot(aes(y = reorder(word,num), 
+             x = num,
+             fill = sentiment)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("#1E90FF", "#F08080")) +
+  facet_wrap(~sentiment, scales = "free") +
+  labs(
+    x = "Count",
+    y = "Word",
+    fill = "Sentiment",
+    title = "Sentiment Analysis of Twitter Content for Hurrican Ida"
+  )
+  
+post_ida_sentiment %>% 
+  group_by(word) %>% 
+  summarise(num = n()) %>% 
+  filter(num > 1000) %>% 
+  left_join(sentiments) %>% 
+  ggplot(aes(y = reorder(word,num), 
+             x = num,
+             fill = sentiment)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("#1E90FF", "#F08080")) +
+  facet_wrap(~sentiment, scales = "free") +
+  labs(
+    x = "Count",
+    y = "Word",
+    fill = "Sentiment",
+    title = "Sentiment Analysis of Twitter Content After Hurrican Ida"
+  )
+
+```
+
 
 ## Analyze and graph word assoctiation
 
@@ -435,9 +693,67 @@ dorian_word_pairs %>%
   )
 ```
 
+```{r word_association_replication}
+
+# separate words and count frequency of word pair occurrence in tweets
+tevent_word_pairs <- tevent_text %>%
+  mutate(text = removeWords(tolower(text), stop_words$word)) %>%
+  unnest_tokens(paired_words, text, token = "ngrams", n = 2) %>%
+  separate(paired_words, c("word1", "word2"), sep = " ") %>%
+  count(word1, word2, sort = TRUE)
+
+```
+
+```{r}
+
+# graph a word cloud with space indicating association.
+# you may change the filter to filter more or less than pairs with 25 instances
+tevent_word_pairs %>%
+  filter(n >= 50 & !is.na(word1) & !is.na(word2)) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n, edge_width = n)) +
+  geom_node_point(color = "darkslategray4", size = 3) +
+  geom_node_text(aes(label = name), vjust = 1.8, size = 3) +
+  labs(
+    title = "Word Network of Tweets during Hurricane event",
+    x = "", y = ""
+  ) +
+  theme(
+    plot.background = element_rect(
+    fill = "grey95",
+    colour = "black",
+    size = 1
+    ),
+    legend.background = element_rect(fill = "grey95")
+  )
+
+```
+
+
+
 ## Spatial Analysis
 
 First, you will need a Census API. You can sign up for one here: https://api.census.gov/data/key_signup.html
+
+```{r census-api-replication}
+
+census_api_key(dlgInput(
+  "Enter a Census API Key",
+  Sys.getenv("CENSUS_API_KEY")
+)$res,
+overwrite = TRUE,
+install = TRUE
+)
+counties <- get_estimates(
+  "county",
+  product = "population",
+  output = "wide",
+  geometry = TRUE,
+  keep_geo_vars = TRUE
+)
+
+```
 
 ```{r census-api}
 census_api_key(dlgInput(
@@ -456,6 +772,7 @@ counties <- get_estimates(
 )
 ```
 
+
 ## Select and save counties of interest
 
 select only the states you want, with FIPS state codes
@@ -463,6 +780,7 @@ look up fips codes here:
 https://en.wikipedia.org/wiki/Federal_Information_Processing_Standard_state_code 
 
 ```{r save-counties}
+
 counties <- filter(
   counties,
   STATEFP %in% c(
@@ -474,15 +792,42 @@ counties <- filter(
 # alternatively, one could select by location using original search criteria...
 
 saveRDS(counties, here("data", "derived", "public", "counties.RDS"))
+
 ```
+
+
+```{r save-counties replication}
+
+counties <- filter(
+  counties,
+  STATEFP %in% c(
+    "54", "51", "50", "47", "45", "44", "42", "39", "37", "36", "05", "01",
+    "34", "33", "29", "28", "25", "24", "23", "22", "21", "18", "17", "13",
+    "12", "11", "10", "09", "48", "40", "20"
+  )
+)
+
+saveRDS(counties, here("data", "derived", "public", "counties.RDS"))
+
+```
+
 
 ### Load counties
 
 Optionally, load counties from the `counties.RDS` file saved with the repository
 
 ```{r load-counties}
+
 counties <- readRDS(here("data", "derived", "public", "counties.RDS"))
+
 ```
+
+```{r load-counties-replication}
+
+counties <- readRDS(here("data", "derived", "public", "counties.RDS"))
+
+```
+
 
 ## Map Population Density and Tweet Points
 
@@ -510,6 +855,29 @@ ggplot() +
   xlim(-96, -67) +
   ylim(24, 47)
 ```
+
+```{r map-tweet-points-replication}
+
+ggplot() +
+  geom_sf(data = counties, 
+    aes(fill = cut_number(DENSITY, 5)), color = "grey") +
+  scale_fill_brewer(palette = "GnBu") +
+  guides(fill = guide_legend(title = "Population Density")) +
+  geom_point(
+    data = tevent, aes(x = lng, y = lat),
+    colour = "purple", alpha = 0.1, size = 1
+  ) +
+  labs(title = "Tweet Locations During Hurricane Ida") +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  ) +
+  xlim(-96, -67) +
+  ylim(24, 47)
+
+```
+
 
 ## Join Tweets to Counties
 
@@ -564,6 +932,49 @@ Optionally, begin here by loading counties with Twitter data
 counties <- readRDS(here("data", "derived", "public", "counties_tweet_counts.RDS"))
 ```
 
+
+```{r join-ida-tweets-to-counties}
+
+tevent_sf <- tevent %>%
+  st_as_sf(coords = c("lng", "lat"), crs = 4326) %>% # make point geometries
+  st_transform(4269) %>% # transform to NAD 1983
+  st_join(select(counties, GEOID)) # spatially join county GEOID to each tweet
+
+tevent_by_county <- tevent_sf %>%
+  st_drop_geometry() %>% # drop geometry / make simple table
+  group_by(GEOID) %>% # group by county using GEOID
+  summarise(event_tweets = n()) # count # of tweets
+
+counties <- counties %>%
+  left_join(tevent_by_county, by = "GEOID") %>%
+  mutate(
+    event_tweets = replace_na(event_tweets, 0), 
+    tweetrate = event_tweets / POP * 10000
+  )
+
+```
+
+```{r join-control-tweets-to-counties}
+
+tdcontrol_by_county <- tdcontrol %>%
+  st_as_sf(coords = c("lng", "lat"), crs = 4326) %>%
+  st_transform(4269) %>%
+  st_join(select(counties, GEOID)) %>%
+  st_drop_geometry() %>%
+  group_by(GEOID) %>%
+  summarise(ctrl_tweets = n())
+
+counties <- counties %>%
+  left_join(tdcontrol_by_county, by = "GEOID") %>%
+  mutate(ctrl_tweets = replace_na(ctrl_tweets, 0))
+
+counties <- counties %>%
+  mutate(ntdi = (event_tweets - ctrl_tweets) / (event_tweets + ctrl_tweets)) %>% 
+  mutate(ntdi = replace_na(ntdi, 0)) # replace NULLs with 0's
+
+```
+
+
 ## Spatial Cluster Analysis
 
 ### Create Spatial Weight Matrix
@@ -571,6 +982,7 @@ counties <- readRDS(here("data", "derived", "public", "counties_tweet_counts.RDS
 Use 110km Euclidean distance and include self in the weight matrix
 
 ```{r spatial-weight-matrix, warning = FALSE}
+
 county_coords <- counties %>%
   st_centroid() %>% # convert polygons to centroid points
   st_coordinates() # convert to simple x,y coordinates to play with stdep
@@ -581,6 +993,21 @@ thresdist <- county_coords %>%
   include.self() # include a county in its own neighborhood (for G*)
 
 thresdist # view statistical summary of the nearest neighbors
+
+```
+
+
+```{r spatial-weight-matrix-replication, warning = FALSE}
+
+county_coords <- counties %>%
+  st_centroid() %>% # convert polygons to centroid points
+  st_coordinates() # convert to simple x,y coordinates to play with stdep
+thresdist <- county_coords %>% 
+  dnearneigh(0, 110, longlat = TRUE) %>% # use geodesic distance of 110km
+  # distance should be long enough for every feature to have >= one neighbor
+  include.self() # include a county in its own neighborhood (for G*)
+thresdist # view statistical summary of the nearest neighbors
+
 ```
 
 Optionally, plot the spatial weight matrix results
@@ -590,6 +1017,8 @@ to all other counties within 110 km.
 ```{r plot-spatial-weight-matrix}
 plot(thresdist, county_coords, lwd=0.1) # plot nearest neighbor ties
 ```
+
+
 
 ## Calculate Getis-Ord G* Statistic
 
@@ -612,6 +1041,21 @@ counties$locG <- as.vector(localG(counties$dorrate,
 summary(counties$locG)
 ```
 
+```{r getis-ord-replication}
+
+# Create weight matrix from the neighbor objects
+dwm <- nb2listw(thresdist, zero.policy = T)
+# Get Ord G* statistic for hot and cold spots
+counties$locG <- counties$tweetrate %>% 
+  localG(listw = dwm, zero.policy = TRUE) %>% 
+  as.vector()
+# check summary statistics of the local G score
+summary(counties$locG)
+
+```
+
+
+
 ## Map Hotpots
 
 classify G scores by significance values typical of Z-scores
@@ -630,8 +1074,51 @@ to change the values & labels accordingly.
 Can we figure out a way to include the neighborhood surrounding each significant
 cluster?
 
+```{r tweet density map}
+
+ggplot() +
+  geom_sf(data = counties, 
+    aes(fill = cut_interval(ntdi, 5)), color = "grey", lwd = 0.1, alpha = 0.8) +
+  scale_fill_brewer(palette = "PuRd") +
+  guides(fill = guide_legend(title = "Normalized Differences")) +
+  labs(title = "Tweet Location During Hurricane Ida") +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  ) +
+  xlim(-96, -67) +
+  ylim(24, 47)
+
+
+```
+
+```{r tweet density}
+
+counties <- counties %>% 
+  mutate(tweetrate_fake = if_else(tweetrate == 0, 0.1, tweetrate)) %>% 
+  mutate(tweetrate_log = log(tweetrate_fake))
+    
+  
+ggplot() +
+  geom_sf(data = counties, 
+    aes(fill = cut_interval(tweetrate_log, 5)), color = "grey", lwd = 0.1, alpha = 0.8) +
+  scale_fill_brewer(palette = "YlGnBu") +
+  guides(fill = guide_legend(title = "Density")) +
+  labs(title = "Tweet Density") +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  ) +
+  xlim(-96, -67) +
+  ylim(24, 47)
+
+
+```
+
 ```{r map-hotspots}
-# classify by significance levels
+
 siglevel <- c(1.15, 1.95)
 counties <- counties %>%
   mutate(sig = cut(locG, c(
@@ -653,7 +1140,7 @@ ggplot() +
     aesthetics = "fill"
   ) +
   guides(fill = guide_legend(title = "Hot Spots")) +
-  labs(title = "Clusters of Hurricane Dorian Twitter Activity") +
+  labs(title = "Clusters of Hurricane Ida Twitter Activity") +
   theme(
     plot.title = element_text(hjust = 0.5),
     axis.title.x = element_blank(),
@@ -661,48 +1148,135 @@ ggplot() +
   )
 ```
 
-```{r tweet density map}
 
-ggplot() +
-  geom_sf(data = counties, 
-    aes(fill = cut_interval(ntdi, 5)), color = "grey", lwd = 0.1, alpha = 0.8) +
-  scale_fill_brewer(palette = "PuRd") +
-  guides(fill = guide_legend(title = "Normalized Differences")) +
-  labs(title = "Tweet Location During Hurricane Dorian") +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    axis.title.x = element_blank(),
-    axis.title.y = element_blank()
-  ) +
-  xlim(-96, -67) +
-  ylim(24, 47)
+# NEW ADDITION
+
+In addition to learning about human's behavior during/after natural hazards event, what are some of the other ways in which we could make use of social media data? Often times, people post about their situation on social media platforms like twitter, and some of those posts could be "HELP" messages. Using the location data of these posts, it might be feasible for us to visualize where do people actually need "help" during hazard events, which would make work of rescue team much easier. It is also possible for us to combine some demographic information with social media data, such as race/ethnicity, income, etc. which serves as an indicator for where population vulnerable to natural hazards are located. 
+
+Below I demonstrate a possible approach to plot "HELP" message for Hurricane Ida along with the census data of regions being affected by the hurricane. 
+
+```{r extract "help" tweets}
+
+ida_help <- tevent %>%
+  filter(str_detect(text, "help | flood | water | emergency"))
+
+```
+
+
+```{r obtaining census metadata}
+
+var_10 <- load_variables(year = 2019, 
+                         dataset = "acs1")
+
+```
+
+
+```{r query race and income data for states needed}
+
+counties_nogeom <- get_acs(geography = "county", 
+                           state = c("West Virginia","Virginia", "Vermont", "Tennessee", "South Carolina", "Rhode Island", "Pennsylvania", "Ohio", "North Carolina", "New York", "Arkansas", "Alabama", "New Jersey", "New Hampshire", "Missouri","Mississippi", "Massachusetts", "Maryland", "Maine", "Louisiana", "Kentucky", "Indiana", "Illinois", "Georgia", "Florida", "District of Columbia", "Delaware", "Connecticut", "Texas", "Oklahoma", "Kansas"), 
+                    variables = c("B01003_001", "B02001_002", "B02001_003", "B03001_003", "B02001_004", "B02001_005", "B06011_001"),
+                                  #total pop,   white alone, black alone,   latinx,         native,      asian        median income
+                    year = 2019,
+                    geometry = FALSE) 
+```
+
+
+```{r pivot the table to prepare for join}
+
+counties_nogeom <- counties_nogeom %>%
+  select(-moe) %>%
+  pivot_wider(names_from = variable, values_from = estimate)
 
 
 ```
 
-```{r tweet density}
+
+```{r rename the columns}
+
+counties_nogeom <- counties_nogeom %>%
+  rename("popTotal" = "B01003_001",
+         "white" = "B02001_002",
+         "black" = "B02001_003",
+         "latinx" = "B03001_003",
+         "native" = "B02001_004",
+         "asian" = "B02001_005",
+         "medianIncome" = "B06011_001")
+```
+
+
+```{r join census data to counties}
+
+counties <- left_join(counties, 
+                            counties_nogeom,
+                            by = "GEOID")
+```
+
+
+```{r calculate minority population}
 
 counties <- counties %>% 
-  mutate(dorrate_fake = if_else(dorrate == 0, 0.1, dorrate)) %>% 
-  mutate(dorrate_log = log(dorrate_fake))
-    
-  
-ggplot() +
-  geom_sf(data = counties, 
-    aes(fill = cut_interval(dorrate_log, 5)), color = "grey", lwd = 0.1, alpha = 0.8) +
-  scale_fill_brewer(palette = "YlGnBu") +
-  guides(fill = guide_legend(title = "Density")) +
-  labs(title = "Tweet Density") +
+  mutate(pctMinority = ((black + native + latinx + asian) / popTotal)*100) 
+
+
+```
+
+
+```{r prepare data for bivariate choropleth}
+
+data <- bi_class(counties, x = pctMinority, y = medianIncome, style = "quantile", dim = 2)
+
+```
+
+
+```{r create bivariate plot}
+
+ map <- ggplot() +
+  geom_sf(data = data, mapping = aes(fill = bi_class), color = "white", size = 0.1, show.legend = FALSE) +
+  bi_scale_fill(pal = "DkCyan", dim = 2) +
+    labs(
+    title = "Race, Income, and Help Messages"
+  ) + 
+  geom_point(
+    data = ida_help, aes(x = lng, y = lat),
+    colour = "red", alpha = 0.8, size = 1
+  ) +
+  theme_bw() +
   theme(
     plot.title = element_text(hjust = 0.5),
     axis.title.x = element_blank(),
     axis.title.y = element_blank()
   ) +
-  xlim(-96, -67) +
-  ylim(24, 47)
+    xlim(-96, -67) +
+    ylim(24, 47)
 
+  
+map
+```
+
+
+```{r prepare legend for bivariate plot}
+
+legend <- bi_legend(pal = "DkCyan",
+                    dim = 2,
+                    xlab = "Higher % Minority ",
+                    ylab = "Higher Income ",
+                    size = 5.5)
+```
+
+
+```{r final plot}
+
+finalPlot <- ggdraw() +
+  draw_plot(map, 0, 0, 1, 1) +
+  draw_plot(legend, 0.6, 0.2, 0.2, 0.2)
+
+finalPlot
 
 ```
+
+
+
 
 
 
