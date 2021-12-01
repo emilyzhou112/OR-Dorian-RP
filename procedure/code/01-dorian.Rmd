@@ -30,7 +30,7 @@ packages <- c(
   "here", "svDialogs", "tidyverse",
   "rtweet", "rehydratoR",
   "tidytext", "tm", "igraph", "ggraph",
-  "tidycensus", "sf", "spdep", "wordcloud", "cowplot", "biclass"
+  "tidycensus", "sf", "spdep", "wordcloud", "cowplot", "biscale"
 )
 
 # additional packages: test which are still needed:
