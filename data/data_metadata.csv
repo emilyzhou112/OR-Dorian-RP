@@ -1,13 +1,12 @@
 path,name,format,sources,metadata
-
-raw/private, tevent_raw.RDS, R data, tweet data for Hurrian Ida data searched on 02-Sept-2021,see metadata\readme.md
-raw/private, tevent_raw2.RDS, R data, tweet data for Hurrian Ida data searched on 05-Sept-2021,see metadata\readme.md
-raw/private, tevent_raw3.RDS, R data, tweet data for Hurrian Ida data searched on 10-Sept-2021,see metadata\readme.md
-raw/private, tevent_raw4.RDS, R data, tweet data for Hurrian Ida data searched on 10-Sept-2021 for different semantic coverage, see metadata\readme.md
-raw/private, tdcontrol_raw.RDS, R data, generic tweets after hurricane season,see metadata\readme.md
-derived/public, tdcontrolids.txt, csv, status id's for Twitter search, see metadata\readme.md
-derived/public, teventids.txt, csv, status id's for Twitter search, see metadata\readme.md
-derived/public, counties_tweet_counts.RDS, R data, counties with counts of ida tweets, normalized tweet difference index, and tweets per 10 000 people,
-derived/public, counties.RDS, R data, census data for counties in Eastern U.S. queried with tidycensus,
-derived/private, tevent.RDS, R data, processed data for ida tweets, see metadata\readme.md
-derived/private, tdcontrol.RDS, R data, processed data for generic tweets, see metadata\readme.md
+raw/private,tevent_raw.RDS,R data,tweet data for Hurrian Ida data searched on 02-Sept-2021,see metadata/readme.md
+raw/private,tevent_raw2.RDS,R data,tweet data for Hurrian Ida data searched on 05-Sept-2021,see metadata/readme.md
+raw/private,tevent_raw3.RDS,R data,tweet data for Hurrian Ida data searched on 10-Sept-2021,see metadata/readme.md
+raw/private,tevent_raw4.RDS,R data,tweet data for Hurrian Ida data searched on 10-Sept-2021 for different semantic coverage,see metadata/readme.md
+raw/private,tdcontrol_raw.RDS,R data,generic tweets after hurricane season,see metadata/readme.md
+derived/public,tdcontrolids.txt,csv,status id's for Twitter search,see metadata\readme.md
+derived/public,teventids.txt,csv,status id's for Twitter search,see metadata\readme.md
+derived/public,counties_tweet_counts.RDS,R data,counties with counts of ida tweets,normalized tweet difference index and tweets per 10 000 people,
+derived/public,counties.RDS,R data,census data for counties in Eastern U.S. queried with tidycensus,
+derived/private,tevent.RDS,R data,processed data for ida tweets,see metadata\readme.md
+derived/private,tdcontrol.RDS,R data,processed data for generic tweets,see metadata\readme.md
