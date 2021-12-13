@@ -1,8 +1,8 @@
-# OR-Dorian
+# RE-Spatial, Temporal, and Content Analysis of Twitter for Natural Hazards
 
-This compendium is for a research project in progress, with the aim of contrasting information from fake Twitter storms with real hurricanes, using the case of Hurricane Dorian in the United States.
+This compendium is developed with the aim of replicating Wang et al's research on twitter activities on wildfire in California, using the case of Hurricane Ida along the east coast of the US in fall 2021.
 
-This research was developed by Joseph Holler.
+This research was developed by Joseph Holler and the GEOG 323 Class of Fall2021
 
 
 # Template for Reproducible and Replicable Research
@@ -60,5 +60,5 @@ The structure of this repository closely follows the excellent [rr-init](https:/
 ## Repository Template Citation and License
 This research compendium template is in its testing phase. It will eventually be published to the public with an open-source license at
 https://github.com/HEGSRR/RR-Template
-The compendium is the work of Peter Kedron, Joseph Holler, and Zach Hilgendorf. 
+The compendium is the work of Peter Kedron, Joseph Holler, and Zach Hilgendorf.
 This draft version of the compendium is provided for private use only: not for distribution.

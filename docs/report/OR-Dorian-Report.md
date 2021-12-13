@@ -83,5 +83,5 @@ https://www.sciencemag.org/lookup/doi/10.1126/science.aaf0918.
 Camerer, C. F., A. Dreber, F. Holzmeister, T.-H. Ho, J. Huber, M. Johannesson, M. Kirchler, G. Nave, B. A. Nosek, T. Pfeiffer, A. Altmejd, N. Buttrick, T. Chan, Y. Chen, E. Forsell, A. Gampa, E. Heikensten, L. Hummer, T. Imai, S. Isaksson, D. Manfredi, J. Rose, E.-J. Wagenmakers, and H. Wu.
 2018.
 Evaluating the replicability of social science experiments in Nature and Science between 2010 and 2015.
-**Nature Human Behaviour** 2 (9):637–644. 
+**Nature Human Behaviour** 2 (9):637–644.
 http://www.nature.com/articles/s41562-018-0399-z.
