@@ -1,7 +1,4 @@
----
-layout: page
-title: RE- Spatial, Temporal, and Content Analysis of Twitter for Natural Hazards
----
+# RE- Spatial, Temporal, and Content Analysis of Twitter for Natural Hazards
 
 Emily Zhou, Middlebury College
 
